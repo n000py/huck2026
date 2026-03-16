@@ -1,0 +1,110 @@
+{
+  "histories": [
+    {
+      "id": "receipt-1773629554222-7hbqtrs",
+      "shopFull": "ベルク すねおり店",
+      "category": "スーパー",
+      "matches": [
+        {
+          "listName": "お酒",
+          "receiptName": "*おーいお茶 玄米茶"
+        },
+        {
+          "listName": "お酒",
+          "receiptName": "()無糖紅茶"
+        },
+        {
+          "listName": "お酒",
+          "receiptName": "ホワイトミントサワ"
+        },
+        {
+          "listName": "お酒",
+          "receiptName": "ウメッシュ3%本格"
+        },
+        {
+          "listName": "お酒",
+          "receiptName": "甘くない檸檬堂無糖にご"
+        },
+        {
+          "listName": "お酒",
+          "receiptName": "こだわり酒場のレモ"
+        },
+        {
+          "listName": "お酒",
+          "receiptName": "サッポロサワー 氷彩1"
+        },
+        {
+          "listName": "お酒",
+          "receiptName": "華よい 爽やかライチス"
+        },
+        {
+          "listName": "生ハム",
+          "receiptName": "*生ハム110g"
+        }
+      ],
+      "extras": [
+        "あヒラーメン"
+      ],
+      "createdAt": "2026-03-16T02:52:34.222Z"
+    },
+    {
+      "id": "receipt-1773627639608-4bwaihq",
+      "shopFull": "ベルク",
+      "category": "スーパー",
+      "matches": [
+        {
+          "listName": "お酒",
+          "receiptName": "ホワイトミントサワ"
+        },
+        {
+          "listName": "お酒",
+          "receiptName": "ウメッシュ3%本格"
+        },
+        {
+          "listName": "お酒",
+          "receiptName": "甘くない檸檬堂無糖にご"
+        },
+        {
+          "listName": "お酒",
+          "receiptName": "こだわり酒場のレモ"
+        },
+        {
+          "listName": "お酒",
+          "receiptName": "サッポロサワー 氷彩1"
+        },
+        {
+          "listName": "生ハム",
+          "receiptName": "生ハム110g"
+        }
+      ],
+      "extras": [
+        "お茶 玄米茶",
+        "無糖紅茶",
+        "爽やかライチ"
+      ],
+      "createdAt": "2026-03-16T02:20:39.608Z"
+    },
+    {
+      "id": "receipt-1773587130424-wuwbj6n",
+      "shopFull": "Belc",
+      "category": "スーパー",
+      "matches": [
+        {
+          "listName": "紅茶",
+          "receiptName": "お茶 玄米茶"
+        }
+      ],
+      "extras": [
+        "無糖紅茶",
+        "ホワイトミントサワー",
+        "ウメッシュ3%本格",
+        "甘くない檸檬堂無糖にご",
+        "こだわり酒場のレモ",
+        "サッポロサワー 氷彩1",
+        "華よい 爽やかライチ",
+        "生ハム110g"
+      ],
+      "createdAt": "2026-03-15T15:05:30.424Z"
+    }
+  ]
+}
