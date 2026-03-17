@@ -1,14 +1,4 @@
-type ReceiptMatch = {
-  listName: string;
-  receiptName?: string;
-};
-
-type ReceiptResult = {
-  shopFull: string;
-  category: string;
-  matches: ReceiptMatch[];
-  extras: string[];
-};
+import type { ReceiptResult } from "@/types";
 
 type ReceiptPanelProps = {
   previewUrl: string | null;
@@ -35,13 +25,13 @@ export default function ReceiptPanel({
         <h2 className="mb-3 text-lg font-semibold">レシート画像をアップロード</h2>
 
         <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => {
-            const file = e.target.files?.[0] ?? null;
-            onSelectFile(file);
-          }}
-          className="block w-full text-sm"
+        type="file"
+        accept="image/*,.heic,.heif"
+        onChange={(e) => {
+          const file = e.target.files?.[0] ?? null;
+          onSelectFile(file);
+        }}
+        className="block w-full text-sm"
         />
 
         <p className="mt-2 text-sm text-slate-500">
@@ -100,17 +90,17 @@ export default function ReceiptPanel({
               <div className="space-y-2">
                 {result.matches.map((match, index) => (
                   <div
-                    key={`${match.listName}-${index}`}
+                    key={`${match.normalizedName}-${index}`}
                     className="rounded-xl border p-3 text-sm"
                   >
                     <p>
-                      <span className="font-medium">リスト名：</span>
-                      {match.listName}
+                      <span className="font-medium">商品名：</span>
+                      {match.normalizedName}
                     </p>
-                    {match.receiptName && (
-                      <p>
+                    {match.rawName && (
+                      <p className="text-slate-600">
                         <span className="font-medium">レシート表記：</span>
-                        {match.receiptName}
+                        {match.rawName}
                       </p>
                     )}
                   </div>
@@ -142,14 +132,23 @@ export default function ReceiptPanel({
             {result.extras.length === 0 ? (
               <p className="text-sm text-slate-500">リスト外の商品はありません</p>
             ) : (
-              <div className="flex flex-wrap gap-2">
+              <div className="space-y-2">
                 {result.extras.map((extra, index) => (
-                  <span
-                    key={`${extra}-${index}`}
-                    className="rounded-full border px-3 py-1 text-sm"
+                  <div
+                    key={`${extra.normalizedName}-${index}`}
+                    className="rounded-xl border px-3 py-2 text-sm"
                   >
-                    {extra}
-                  </span>
+                    <p>
+                      <span className="font-medium">商品名：</span>
+                      {extra.normalizedName}
+                    </p>
+                    {extra.rawName && (
+                      <p className="text-slate-500">
+                        <span className="font-medium">レシート表記：</span>
+                        {extra.rawName}
+                      </p>
+                    )}
+                  </div>
                 ))}
               </div>
             )}

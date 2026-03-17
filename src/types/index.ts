@@ -19,11 +19,6 @@ export type Item = {
   reason: string;
 };
 
-export type ReceiptResult = {
-  itemName: string;
-  result: "matched" | "missing" | "extra";
-};
-
 export type AiSuggestionResult = {
   itemName: string;
   storeName: string;
@@ -38,4 +33,21 @@ export type ReceiptMatchResponse = {
     receiptName?: string;
   }[];
   extras: string[];
+};
+
+export type ReceiptMatch = {
+  normalizedName: string;
+  rawName?: string;
+};
+
+export type ReceiptExtra = {
+  normalizedName: string;
+  rawName?: string;
+};
+
+export type ReceiptResult = {
+  shopFull: string;
+  category: string;
+  matches: ReceiptMatch[];
+  extras: ReceiptExtra[];
 };

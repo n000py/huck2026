@@ -21,9 +21,17 @@ import {
 import { findStoreIdByName } from "@/lib/shopMapping";
 import { suggestStoresByGemini } from "@/lib/gemini";
 import { applyReceiptResultToItems } from "@/lib/receipt";
-import { Item, Mode } from "@/types";
+import type { Item, Mode, ReceiptResult } from "@/types";
 import ReceiptInsightsPanel from "@/components/ReceiptInsightsPanel";
 import { buildReceiptInsights } from "@/lib/receiptInsights";
+import { savePurchasedItems } from "@/lib/purchaseClient";
+import RecommendationPanel from "@/components/RecommendationPanel";
+import {
+  fetchRecommendations,
+  syncShoppingList,
+  type RecommendItem,
+} from "@/lib/recommendClient";
+import { normalizePurchasedItems } from "@/lib/normalizeClient";
 
 
 function createItemId() {
@@ -34,12 +42,117 @@ function createItemId() {
   return `item-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-type ReceiptResult = {
+function isHeicFile(file: File) {
+  const name = file.name.toLowerCase();
+  const type = file.type.toLowerCase();
+
+  return (
+    name.endsWith(".heic") ||
+    name.endsWith(".heif") ||
+    type === "image/heic" ||
+    type === "image/heif"
+  );
+}
+
+async function convertHeicToJpeg(file: File): Promise<File> {
+  const heic2any = (await import("heic2any")).default;
+
+  const converted = await heic2any({
+    blob: file,
+    toType: "image/jpeg",
+    quality: 0.9,
+  });
+
+  const blob = Array.isArray(converted) ? converted[0] : converted;
+
+  return new File(
+    [blob as Blob],
+    file.name.replace(/\.(heic|heif)$/i, ".jpg"),
+    { type: "image/jpeg" }
+  );
+}
+
+type ApiReceiptMatch = {
+  listName: string;
+  receiptName?: string;
+};
+
+type ApiReceiptResult = {
   shopFull: string;
   category: string;
-  matches: { listName: string; receiptName?: string }[];
+  matches: ApiReceiptMatch[];
   extras: string[];
 };
+
+type NormalizedPurchasedItem = {
+  raw_name: string;
+  normalized_name: string;
+  shop: string;
+  is_consumable: boolean | null;
+};
+
+function buildNormalizeItemsFromApiReceiptResult(result: ApiReceiptResult) {
+  const shopName = result.shopFull?.trim() || result.category?.trim() || "不明";
+
+  const matchedItems = result.matches.map((match) => ({
+    raw_name: match.receiptName?.trim() || match.listName.trim(),
+    shop: shopName,
+  }));
+
+  const extraItems = result.extras
+    .map((extra) => extra.trim())
+    .filter((name) => name !== "")
+    .map((name) => ({
+      raw_name: name,
+      shop: shopName,
+    }));
+
+  return [...matchedItems, ...extraItems];
+}
+
+function buildDisplayReceiptResult(
+  apiResult: ApiReceiptResult,
+  normalizedItems: NormalizedPurchasedItem[]
+): ReceiptResult {
+  const normalizedMap = new Map(
+    normalizedItems.map((item) => [
+      item.raw_name.trim(),
+      item.normalized_name.trim() || item.raw_name.trim(),
+    ])
+  );
+
+  return {
+    shopFull: apiResult.shopFull,
+    category: apiResult.category,
+    matches: apiResult.matches
+      .map((match) => {
+        const rawName = match.receiptName?.trim() || match.listName.trim();
+        if (!rawName) return null;
+
+        const normalizedName =
+          normalizedMap.get(rawName) || match.listName.trim() || rawName;
+
+        return {
+          normalizedName,
+          rawName: normalizedName === rawName ? undefined : rawName,
+        };
+      })
+      .filter((match): match is NonNullable<typeof match> => match !== null),
+
+    extras: apiResult.extras
+      .map((extra) => extra.trim())
+      .filter((rawName) => rawName !== "")
+      .map((rawName) => {
+        const normalizedName = normalizedMap.get(rawName) || rawName;
+
+        return {
+          normalizedName,
+          rawName: normalizedName === rawName ? undefined : rawName,
+        };
+      }),
+  };
+}
+
 
 export default function Home() {
   const [mode, setMode] = useState<Mode>("edit");
@@ -67,24 +180,21 @@ export default function Home() {
   const [receiptHistories, setReceiptHistories] = useState<ReceiptHistoryItem[]>([]);
   const [receiptHistoryLoading, setReceiptHistoryLoading] = useState(false);
   const [receiptHistoryError, setReceiptHistoryError] = useState<string | null>(null);
+  const [recommendations, setRecommendations] = useState<RecommendItem[]>([]);
+  const [recommendLoading, setRecommendLoading] = useState(false);
+  const [recommendError, setRecommendError] = useState<string | null>(null);
   
 
   const receiptInsights = useMemo(() => {
     return buildReceiptInsights(receiptHistories, items);
   }, [receiptHistories, items]);
-
+  
   const unmatchedItems = useMemo(() => {
-    if (!receiptResult) return [];
-
-    const matchedNames = new Set(
-      receiptResult.matches.map((match) => match.listName.trim().toLowerCase())
-    );
-
     return items
-      .map((item) => item.name.trim())
-      .filter((name) => name !== "")
-      .filter((name) => !matchedNames.has(name.toLowerCase()));
-  }, [receiptResult, items]);
+    .filter((item) => item.purchaseStatus !== "bought")
+    .map((item) => item.name.trim())
+    .filter((name) => name !== "");
+  }, [items]);
 
   const existingItemNames = useMemo(() => {
     return items.map((item) => item.name);
@@ -208,6 +318,28 @@ export default function Home() {
   useEffect(() => {
     sessionStorage.setItem("smart-shopping-mode", mode);
   }, [mode]);
+  
+  useEffect(() => {
+    if (!isHydrated) return;
+
+    const run = async () => {
+      try {
+        setRecommendLoading(true);
+        setRecommendError(null);
+
+        await syncShoppingList(items.map((item) => item.name));
+        const data = await fetchRecommendations();
+        setRecommendations(data);
+      } catch (error) {
+        console.error(error);
+        setRecommendError("補充おすすめの取得に失敗しました");
+      } finally {
+        setRecommendLoading(false);
+      }
+    };
+
+    run();
+  }, [items, isHydrated]);
 
   const handleAddItem = () => {
     const trimmed = inputValue.trim();
@@ -226,6 +358,33 @@ export default function Home() {
     setItems((prev) => [...prev, newItem]);
     setInputValue("");
     setStatusMessage(`「${trimmed}」を追加しました`);
+  };
+
+  const handleAddRecommendation = (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+
+    const alreadyExists = items.some(
+      (item) => item.name.trim().toLowerCase() === trimmed.toLowerCase()
+    );
+
+    if (alreadyExists) {
+      setStatusMessage(`「${trimmed}」はすでにリストに入っています`);
+      return;
+    }
+
+    const newItem: Item = {
+      id: createItemId(),
+      name: trimmed,
+      suggestedStoreId: null,
+     currentStoreId: null,
+     suggestionStatus: "manual",
+     purchaseStatus: "pending",
+     reason: "補充おすすめから追加",
+   };
+
+   setItems((prev) => [...prev, newItem]);
+   setStatusMessage(`「${trimmed}」を補充おすすめから追加しました`);
   };
 
   const handleResetList = () => {
@@ -345,24 +504,42 @@ export default function Home() {
     setSelectedStoreId(targetStore.id);
   };
 
-  const handleSelectReceiptFile = (file: File | null) => {
-    if (receiptPreviewUrl) {
-      URL.revokeObjectURL(receiptPreviewUrl);
+  const handleSelectReceiptFile = async (file: File | null) => {
+  if (receiptPreviewUrl) {
+    URL.revokeObjectURL(receiptPreviewUrl);
+  }
+
+  setReceiptResult(null);
+  setReceiptError(null);
+
+  if (!file) {
+    setReceiptFile(null);
+    setReceiptPreviewUrl(null);
+    return;
+  }
+
+  try {
+    let workingFile = file;
+
+    if (isHeicFile(file)) {
+      setStatusMessage("HEIC画像をJPEGに変換中...");
+      workingFile = await convertHeicToJpeg(file);
     }
 
-    setReceiptFile(file);
-    setReceiptResult(null);
-    setReceiptError(null);
+    setReceiptFile(workingFile);
 
-    if (!file) {
-      setReceiptPreviewUrl(null);
-      return;
-    }
-
-    const previewUrl = URL.createObjectURL(file);
+    const previewUrl = URL.createObjectURL(workingFile);
     setReceiptPreviewUrl(previewUrl);
-    setStatusMessage(`レシート画像「${file.name}」を選択しました`);
-  };
+
+    setStatusMessage(`レシート画像「${workingFile.name}」を選択しました`);
+  } catch (error) {
+    console.error(error);
+    setReceiptFile(null);
+    setReceiptPreviewUrl(null);
+    setReceiptError("HEIC画像の変換に失敗しました");
+    setStatusMessage("HEIC画像の変換に失敗しました");
+  }
+};
 
   const loadReceiptHistories = async () => {
     try {
@@ -455,21 +632,58 @@ export default function Home() {
         throw new Error(message || "レシート照合に失敗しました");
       }
 
-      const data: ReceiptResult = await response.json();
+      const apiData: ApiReceiptResult = await response.json();
 
-      setReceiptResult(data);
-      setItems((prev) => applyReceiptResultToItems(prev, data));
+setItems((prev) => applyReceiptResultToItems(prev, apiData));
 
-      await appendReceiptHistory({
-        shopFull: data.shopFull,
-        category: data.category,
-        matches: data.matches,
-        extras: data.extras,
-      });
+await appendReceiptHistory({
+  shopFull: apiData.shopFull,
+  category: apiData.category,
+  matches: apiData.matches,
+  extras: apiData.extras,
+});
 
-      await loadReceiptHistories();
+const normalizeItems = buildNormalizeItemsFromApiReceiptResult(apiData);
 
-      setStatusMessage("レシート照合が完了しました");
+let normalizedItems: NormalizedPurchasedItem[] = normalizeItems.map((item) => ({
+  raw_name: item.raw_name,
+  normalized_name: item.raw_name,
+  shop: item.shop,
+  is_consumable: null,
+}));
+
+if (normalizeItems.length > 0) {
+  const apiNormalizedItems = await normalizePurchasedItems({
+    items: normalizeItems,
+    storeCandidates: STORES.map((store) => store.name),
+  });
+
+  console.log("normalizedItems", apiNormalizedItems);
+
+  normalizedItems = apiNormalizedItems.map((item) => ({
+    raw_name: item.raw_name,
+    normalized_name: item.normalized_name,
+    shop: item.shop,
+    is_consumable: item.is_consumable,
+  }));
+
+  const purchasePayload = normalizedItems.map((item) => ({
+    raw_name: item.raw_name,
+    normalized_name: item.normalized_name,
+    shop: item.shop,
+    is_consumable: item.is_consumable,
+  }));
+
+  await savePurchasedItems(purchasePayload);
+}
+
+const displayResult = buildDisplayReceiptResult(apiData, normalizedItems);
+setReceiptResult(displayResult);
+
+await loadReceiptHistories();
+
+setStatusMessage("レシート照合と購入履歴の保存が完了しました");
+
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "レシート照合に失敗しました";
@@ -478,6 +692,10 @@ export default function Home() {
     } finally {
       setReceiptLoading(false);
     }
+
+    
+
+
   };
 
   const handleDeleteItem = (itemId: string) => {
@@ -664,6 +882,19 @@ export default function Home() {
       onAutoSuggest={handleAutoSuggest}
       isAiLoading={isAiLoading}
     />
+
+    <div className="mb-4">
+  <RecommendationPanel
+    recommendations={recommendations}
+    onAddRecommendation={handleAddRecommendation}
+  />
+  {recommendLoading && (
+    <div className="mt-2 text-sm text-neutral-500">補充おすすめを更新中...</div>
+  )}
+  {recommendError && (
+    <div className="mt-2 text-sm text-red-600">{recommendError}</div>
+  )}
+</div>
 
     {unclassifiedItems.length > 0 && (
       <div className="mb-4 rounded-2xl border bg-white p-4">
