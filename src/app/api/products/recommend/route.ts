@@ -10,8 +10,17 @@ type RecommendItem = {
   recommended_shop: string;
 };
 
-function diffDays(a: Date, b: Date) {
-  return Math.floor((a.getTime() - b.getTime()) / (1000 * 60 * 60 * 24));
+function diffDays(later: Date, earlier: Date) {
+  return Math.floor(
+    (later.getTime() - earlier.getTime()) / (1000 * 60 * 60 * 24)
+  );
+}
+
+function dateKey(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 export async function GET() {
@@ -75,25 +84,35 @@ export async function GET() {
 
     for (const [productId, entry] of grouped.entries()) {
       if (currentProductIds.has(productId)) continue;
-      if (entry.dates.length < 2) continue;
+
+      // 同じ日の複数購入は1回として扱う
+      const uniqueDates = Array.from(
+        new Map(entry.dates.map((date) => [dateKey(date), date])).values()
+      ).sort((a, b) => a.getTime() - b.getTime());
+
+      // 3回未満は周期が不安定なのでおすすめしない
+      if (uniqueDates.length < 3) continue;
 
       const intervals: number[] = [];
-      for (let i = 1; i < entry.dates.length; i++) {
-        const days = diffDays(entry.dates[i], entry.dates[i - 1]);
-        if (days >= 0) intervals.push(days);
+      for (let i = 1; i < uniqueDates.length; i++) {
+        const days = diffDays(uniqueDates[i], uniqueDates[i - 1]);
+        if (days > 0) intervals.push(days);
       }
 
-      if (intervals.length === 0) continue;
+      if (intervals.length < 2) continue;
 
-      const cycle = Math.max(
-        1,
-        Math.round(intervals.reduce((sum, v) => sum + v, 0) / intervals.length)
+      const cycle = Math.round(
+        intervals.reduce((sum, v) => sum + v, 0) / intervals.length
       );
 
-      const lastDate = entry.dates[entry.dates.length - 1];
+      // 1日周期は表示しない
+      if (cycle <= 1) continue;
+
+      const lastDate = uniqueDates[uniqueDates.length - 1];
       const daysSince = diffDays(now, lastDate);
 
-      if (daysSince < cycle - 1) continue;
+      // 周期に達したらおすすめする
+      if (daysSince < cycle) continue;
 
       const shopCounts = new Map<string, number>();
       for (const shop of entry.shops) {

@@ -1,5 +1,33 @@
 {
-  "items": [],
-  "selectedStoreId": "store-drugstore",
-  "updatedAt": "2026-03-16T05:21:40.599Z"
+  "items": [
+    {
+      "id": "item-1773901341849-9g3ndmp",
+      "name": "乾電池",
+      "suggestedStoreId": "store-100yen",
+      "currentStoreId": "store-100yen",
+      "suggestionStatus": "accepted",
+      "purchaseStatus": "pending",
+      "reason": "100均でよく売られています。"
+    },
+    {
+      "id": "item-1773901359366-0wihx1c",
+      "name": "豆乳",
+      "suggestedStoreId": "store-supermarket",
+      "currentStoreId": "store-supermarket",
+      "suggestionStatus": "accepted",
+      "purchaseStatus": "bought",
+      "reason": "スーパーで日用品として売られています。"
+    },
+    {
+      "id": "item-1773901373983-l5twgkk",
+      "name": "ゴミ袋ハンガー",
+      "suggestedStoreId": "store-100yen",
+      "currentStoreId": "store-100yen",
+      "suggestionStatus": "accepted",
+      "purchaseStatus": "pending",
+      "reason": "100均で便利グッズとして売られています。"
+    }
+  ],
+  "selectedStoreId": "store-100yen",
+  "updatedAt": "2026-03-19T06:23:28.882Z"
 }

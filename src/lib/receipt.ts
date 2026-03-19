@@ -1,13 +1,23 @@
-import { Item, ReceiptMatchResponse } from "@/types";
+import type { Item, ReceiptMatchResponse } from "@/types";
+
+function normalizeKey(value: string) {
+  return value.trim().toLowerCase();
+}
 
 export function applyReceiptResultToItems(
   items: Item[],
   receipt: ReceiptMatchResponse
 ): Item[] {
-  const matchedNames = new Set(receipt.matches.map((m) => m.listName));
+  const matchedKeys = new Set(
+    receipt.matches
+      .map((match) => normalizeKey(match.listName))
+      .filter((name) => name !== "")
+  );
 
   return items.map((item) => {
-    if (matchedNames.has(item.name)) {
+    const itemKey = normalizeKey(item.name);
+
+    if (matchedKeys.has(itemKey)) {
       return {
         ...item,
         purchaseStatus: "bought" as const,
@@ -16,7 +26,8 @@ export function applyReceiptResultToItems(
 
     return {
       ...item,
-      purchaseStatus: "not_bought" as const,
+      purchaseStatus:
+        item.purchaseStatus === "bought" ? "bought" : "pending",
     };
   });
 }

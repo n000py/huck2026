@@ -1,88 +1,273 @@
 {
   "histories": [
     {
-      "id": "receipt-1773629554222-7hbqtrs",
-      "shopFull": "ベルク すねおり店",
+      "id": "receipt-1773901408576-o1g63kw",
+      "shopFull": "マミーマート",
       "category": "スーパー",
       "matches": [
         {
-          "listName": "お酒",
-          "receiptName": "*おーいお茶 玄米茶"
-        },
-        {
-          "listName": "お酒",
-          "receiptName": "()無糖紅茶"
-        },
-        {
-          "listName": "お酒",
-          "receiptName": "ホワイトミントサワ"
-        },
-        {
-          "listName": "お酒",
-          "receiptName": "ウメッシュ3%本格"
-        },
-        {
-          "listName": "お酒",
-          "receiptName": "甘くない檸檬堂無糖にご"
-        },
-        {
-          "listName": "お酒",
-          "receiptName": "こだわり酒場のレモ"
-        },
-        {
-          "listName": "お酒",
-          "receiptName": "サッポロサワー 氷彩1"
-        },
-        {
-          "listName": "お酒",
-          "receiptName": "華よい 爽やかライチス"
-        },
-        {
-          "listName": "生ハム",
-          "receiptName": "*生ハム110g"
+          "listName": "豆乳",
+          "receiptName": "おいしい無調整豆乳"
         }
       ],
       "extras": [
-        "あヒラーメン"
+        "パルスウィート",
+        "無添加トマトジュース",
+        "レジ袋",
+        "氷結山形産佐藤錦"
       ],
-      "createdAt": "2026-03-16T02:52:34.222Z"
+      "createdAt": "2026-03-19T06:23:28.576Z"
     },
     {
-      "id": "receipt-1773627639608-4bwaihq",
-      "shopFull": "ベルク",
+      "id": "receipt-1773896921872-t4w2c82",
+      "shopFull": "Seria",
+      "category": "100均",
+      "matches": [],
+      "extras": [
+        "ゴミ袋ハンガー",
+        "磁石強力マグネットフックスクエア",
+        "ステンレス雪平鍋用蓋"
+      ],
+      "createdAt": "2026-03-19T05:08:41.872Z"
+    },
+    {
+      "id": "receipt-1773896814054-63u78fs",
+      "shopFull": "Seria",
+      "category": "100均",
+      "matches": [],
+      "extras": [
+        "ゴミ袋ハンガー",
+        "磁石強力マグネットフックスクエア",
+        "ステンレス雪平鍋用蓋"
+      ],
+      "createdAt": "2026-03-19T05:06:54.054Z"
+    },
+    {
+      "id": "receipt-1773896640754-df46mmo",
+      "shopFull": "マミーマート",
       "category": "スーパー",
       "matches": [
         {
-          "listName": "お酒",
-          "receiptName": "ホワイトミントサワ"
+          "listName": "トマトジュース",
+          "receiptName": "無添加トマトジュース"
         },
         {
-          "listName": "お酒",
-          "receiptName": "ウメッシュ3%本格"
-        },
-        {
-          "listName": "お酒",
-          "receiptName": "甘くない檸檬堂無糖にご"
-        },
-        {
-          "listName": "お酒",
-          "receiptName": "こだわり酒場のレモ"
-        },
-        {
-          "listName": "お酒",
-          "receiptName": "サッポロサワー 氷彩1"
-        },
-        {
-          "listName": "生ハム",
-          "receiptName": "生ハム110g"
+          "listName": "レジ袋"
         }
       ],
       "extras": [
-        "お茶 玄米茶",
-        "無糖紅茶",
-        "爽やかライチ"
+        "パルスィート",
+        "おいしい無調整豆乳",
+        "氷結山形産佐藤錦"
       ],
-      "createdAt": "2026-03-16T02:20:39.608Z"
+      "createdAt": "2026-03-19T05:04:00.754Z"
+    },
+    {
+      "id": "receipt-1773896596144-drn2k4r",
+      "shopFull": "マミーマート",
+      "category": "スーパー",
+      "matches": [],
+      "extras": [
+        "パルスウィート",
+        "無添加トマトジュース",
+        "レジ袋",
+        "おいしい無調整豆乳",
+        "氷結山形産佐藤錦"
+      ],
+      "createdAt": "2026-03-19T05:03:16.145Z"
+    },
+    {
+      "id": "receipt-1773896334596-v5vg7fe",
+      "shopFull": "マミープラス 高坂店",
+      "category": "スーパー",
+      "matches": [],
+      "extras": [
+        "まろやか絹とうふ",
+        "バキッ！とたれとろっ豆",
+        "白い小たまご",
+        "カットぶなしめじ",
+        "緑豆もやし",
+        "半透明ポリ袋45L"
+      ],
+      "createdAt": "2026-03-19T04:58:54.596Z"
+    },
+    {
+      "id": "receipt-1773896292960-wvxdf9d",
+      "shopFull": "Seria",
+      "category": "100均",
+      "matches": [
+        {
+          "listName": "ゴミ袋ハンガー"
+        },
+        {
+          "listName": "磁石強力マグネットフックスクエア"
+        },
+        {
+          "listName": "ステンレス雪平鍋用蓋"
+        }
+      ],
+      "extras": [],
+      "createdAt": "2026-03-19T04:58:12.960Z"
+    },
+    {
+      "id": "receipt-1773883405939-qjxl8vx",
+      "shopFull": "マミープラス",
+      "category": "スーパー",
+      "matches": [],
+      "extras": [
+        "まろやか絹とうふ",
+        "パキッ！とたれとろっ豆",
+        "白い小たまご",
+        "カットぶなしめじ",
+        "緑豆もやし",
+        "半透明ポリ袋45L"
+      ],
+      "createdAt": "2026-03-19T01:23:25.939Z"
+    },
+    {
+      "id": "receipt-1773883356995-pidhrpt",
+      "shopFull": "マミープラス",
+      "category": "スーパー",
+      "matches": [
+        {
+          "listName": "豆腐",
+          "receiptName": "まろやか絹とうふ"
+        },
+        {
+          "listName": "ぶなしめじ",
+          "receiptName": "カットぶなしめじ"
+        },
+        {
+          "listName": "納豆",
+          "receiptName": "パキッ！とたれとろっ豆"
+        }
+      ],
+      "extras": [
+        "白い小たまご",
+        "緑豆もやし",
+        "半透明ポリ袋45L"
+      ],
+      "createdAt": "2026-03-19T01:22:36.995Z"
+    },
+    {
+      "id": "receipt-1773843526837-mm6uyds",
+      "shopFull": "マミープラス",
+      "category": "スーパー",
+      "matches": [
+        {
+          "listName": "豆腐",
+          "receiptName": "まろやか絹とうふ"
+        },
+        {
+          "listName": "ぶなしめじ",
+          "receiptName": "カットぶなしめじ"
+        },
+        {
+          "listName": "納豆",
+          "receiptName": "パキッ!とたれとろっ豆"
+        }
+      ],
+      "extras": [
+        "白い小たまご",
+        "緑豆もやし",
+        "半透明ポリ袋 45L"
+      ],
+      "createdAt": "2026-03-18T14:18:46.837Z"
+    },
+    {
+      "id": "receipt-1773843290877-pih18y9",
+      "shopFull": "マミーマート",
+      "category": "スーパー",
+      "matches": [],
+      "extras": [
+        "パルスウィート",
+        "無添加トマトジュース",
+        "レジ袋",
+        "おいしい無調整豆乳",
+        "氷結山形産佐藤錦"
+      ],
+      "createdAt": "2026-03-18T14:14:50.877Z"
+    },
+    {
+      "id": "receipt-1773843173366-l8hi2ig",
+      "shopFull": "マミーマート",
+      "category": "スーパー",
+      "matches": [
+        {
+          "listName": "豆乳",
+          "receiptName": "おいしい無調整豆乳"
+        },
+        {
+          "listName": "チューハイ",
+          "receiptName": "氷結山形産佐藤錦"
+        }
+      ],
+      "extras": [
+        "パルスウィート",
+        "無添加トマトジュース",
+        "レジ袋"
+      ],
+      "createdAt": "2026-03-18T14:12:53.366Z"
+    },
+    {
+      "id": "receipt-1773842870050-biwrmil",
+      "shopFull": "マミーマート",
+      "category": "スーパー",
+      "matches": [],
+      "extras": [
+        "パルスィート",
+        "無添加トマトジュース",
+        "レジ袋",
+        "おいしい無調整豆乳",
+        "氷結山形産佐藤錦"
+      ],
+      "createdAt": "2026-03-18T14:07:50.050Z"
+    },
+    {
+      "id": "receipt-1773801518617-gnhbjxi",
+      "shopFull": "マミーマート",
+      "category": "スーパー",
+      "matches": [],
+      "extras": [
+        "パルスィート",
+        "無添加トマトジュース",
+        "レジ袋",
+        "おいしい無調整豆乳",
+        "氷結山形産佐藤錦"
+      ],
+      "createdAt": "2026-03-18T02:38:38.617Z"
+    },
+    {
+      "id": "receipt-1773764070736-lxqx7zi",
+      "shopFull": "マミーマート",
+      "category": "スーパー",
+      "matches": [
+        {
+          "listName": "豆乳",
+          "receiptName": "おいしい無調整豆乳"
+        }
+      ],
+      "extras": [
+        "パルスィート",
+        "無添加トマトジュース",
+        "レジ袋",
+        "氷結山形産佐藤錦"
+      ],
+      "createdAt": "2026-03-17T16:14:30.736Z"
+    },
+    {
+      "id": "receipt-1773763863685-m9o2e6e",
+      "shopFull": "マミーマート",
+      "category": "スーパー",
+      "matches": [],
+      "extras": [
+        "パルスィート",
+        "無添加トマトジュース",
+        "レジ袋",
+        "おいしい無調整豆乳",
+        "氷結山形産佐藤錦"
+      ],
+      "createdAt": "2026-03-17T16:11:03.685Z"
     },
     {
       "id": "receipt-1773587130424-wuwbj6n",

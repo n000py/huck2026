@@ -1,8 +1,7 @@
 export type Mode = "edit" | "shopping" | "receipt";
 
-export type SuggestionStatus = "accepted" | "modified" | "rejected";
-
-export type PurchaseStatus = "pending" | "bought" | "not_bought";
+export type SuggestionStatus = "accepted" | "modified" | "manual";
+export type PurchaseStatus = "pending" | "bought";
 
 export type Store = {
   id: string;
@@ -14,8 +13,8 @@ export type Item = {
   name: string;
   suggestedStoreId: string | null;
   currentStoreId: string | null;
-  suggestionStatus: "accepted" | "modified" | "manual";
-  purchaseStatus: "pending" | "bought";
+  suggestionStatus: SuggestionStatus;
+  purchaseStatus: PurchaseStatus;
   reason: string;
 };
 

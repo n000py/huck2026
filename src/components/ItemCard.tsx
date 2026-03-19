@@ -24,10 +24,10 @@ function getBadge(status: SuggestionStatus) {
           手動変更
         </span>
       );
-    case "rejected":
+    case "manual":
       return (
-        <span className="rounded-full bg-red-100 px-2 py-1 text-xs text-red-700">
-          提案拒否
+        <span className="rounded-full bg-green-100 px-2 py-1 text-xs text-green-700">
+          手動追加
         </span>
       );
     default:

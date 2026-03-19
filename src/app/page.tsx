@@ -153,6 +153,117 @@ function buildDisplayReceiptResult(
   };
 }
 
+// function reconcileReceiptResultWithNormalizedItems(
+//   apiResult: ApiReceiptResult,
+//   normalizedItems: NormalizedPurchasedItem[],
+//   items: Item[]
+// ): ApiReceiptResult {
+//   const normalizedNameByRawName = new Map(
+//     normalizedItems.map((item) => [
+//       normalizeKey(item.raw_name),
+//       item.normalized_name.trim() || item.raw_name.trim(),
+//     ])
+//   );
+
+//   const pendingListNameMap = new Map(
+//     items
+//       .filter((item) => item.purchaseStatus !== "bought")
+//       .map((item) => [normalizeKey(item.name), item.name.trim()])
+//   );
+
+//   const matchedListNameSet = new Set(
+//     apiResult.matches.map((match) => normalizeKey(match.listName))
+//   );
+
+//   const nextMatches: ApiReceiptMatch[] = [...apiResult.matches];
+//   const nextExtras: string[] = [];
+
+//   for (const extra of apiResult.extras) {
+//     const rawName = extra.trim();
+//     if (!rawName) continue;
+
+//     const normalizedName =
+//       normalizedNameByRawName.get(normalizeKey(rawName)) ?? rawName;
+
+//     const matchedListName = pendingListNameMap.get(normalizeKey(normalizedName));
+
+//     if (matchedListName && !matchedListNameSet.has(normalizeKey(matchedListName))) {
+//       nextMatches.push({
+//         listName: matchedListName,
+//         receiptName: rawName !== matchedListName ? rawName : undefined,
+//       });
+//       matchedListNameSet.add(normalizeKey(matchedListName));
+//     } else {
+//       nextExtras.push(rawName);
+//     }
+//   }
+
+//   return {
+//     ...apiResult,
+//     matches: nextMatches,
+//     extras: nextExtras,
+//   };
+// }
+
+function normalizeKey(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function reconcileReceiptResultWithNormalizedItems(
+  apiResult: ApiReceiptResult,
+  normalizedItems: NormalizedPurchasedItem[],
+  itemNames: string[]
+): ApiReceiptResult {
+  const normalizedNameByRawName = new Map(
+    normalizedItems.map((item) => [
+      normalizeKey(item.raw_name),
+      item.normalized_name.trim() || item.raw_name.trim(),
+    ])
+  );
+
+  const listNameMap = new Map(
+    itemNames
+      .map((name) => name.trim())
+      .filter((name) => name !== "")
+      .map((name) => [normalizeKey(name), name] as const)
+  );
+
+  const matchedListNameSet = new Set(
+    apiResult.matches.map((match) => normalizeKey(match.listName))
+  );
+
+  const nextMatches: ApiReceiptMatch[] = [...apiResult.matches];
+  const nextExtras: string[] = [];
+
+  for (const extra of apiResult.extras) {
+    const rawName = extra.trim();
+    if (!rawName) continue;
+
+    const normalizedName =
+      normalizedNameByRawName.get(normalizeKey(rawName)) ?? rawName;
+
+    const matchedListName =
+      listNameMap.get(normalizeKey(rawName)) ??
+      listNameMap.get(normalizeKey(normalizedName));
+
+    if (matchedListName && !matchedListNameSet.has(normalizeKey(matchedListName))) {
+      nextMatches.push({
+        listName: matchedListName,
+        receiptName: rawName !== matchedListName ? rawName : undefined,
+      });
+      matchedListNameSet.add(normalizeKey(matchedListName));
+    } else {
+      nextExtras.push(rawName);
+    }
+  }
+
+  return {
+    ...apiResult,
+    matches: nextMatches,
+    extras: nextExtras,
+  };
+}
+
 
 export default function Home() {
   const [mode, setMode] = useState<Mode>("edit");
@@ -171,6 +282,11 @@ export default function Home() {
   const [receiptError, setReceiptError] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const [isInsightsOpen, setIsInsightsOpen] = useState(false);
+//   const [debugReceiptData, setDebugReceiptData] = useState<{
+//   apiData: ApiReceiptResult | null;
+//   normalizedItems: NormalizedPurchasedItem[];
+//   reconciledApiData: ApiReceiptResult | null;
+// } | null>(null);
 
   const selectedStore = useMemo(
     () => STORES.find((store) => store.id === selectedStoreId),
@@ -581,122 +697,144 @@ export default function Home() {
     });
   };
 
-  const handleAnalyzeReceipt = async () => {
-    if (!receiptFile) {
-      setReceiptError("先にレシート画像を選択してください");
-      setStatusMessage("レシート画像を選択してください");
-      return;
-    }
+const handleAnalyzeReceipt = async () => {
+  if (!receiptFile) {
+    setReceiptError("先にレシート画像を選択してください");
+    setStatusMessage("レシート画像を選択してください");
+    return;
+  }
 
-    try {
-      setReceiptLoading(true);
-      setReceiptError(null);
-      setReceiptResult(null);
-      setStatusMessage("レシートを照合中...");
+  try {
+    setReceiptLoading(true);
+    setReceiptError(null);
+    setReceiptResult(null);
+    setStatusMessage("レシートを照合中...");
 
-      const imageBase64 = await fileToBase64(receiptFile);
+    const imageBase64 = await fileToBase64(receiptFile);
+    
+    const targetItems = items.filter((item) => item.name.trim() !== "");
+    
+    const itemNames = targetItems.map((item) => item.name.trim());
 
-      const itemNames = items.map((item) => item.name);
+    const categorizedItems = targetItems
+      .filter((item) => item.currentStoreId)
+      .map((item) => {
+        const matchedStore = STORES.find(
+          (store) => store.id === item.currentStoreId
+        );
 
-      const categorizedItems = items
-        .filter((item) => item.currentStoreId)
-        .map((item) => {
-          const matchedStore = STORES.find(
-            (store) => store.id === item.currentStoreId
-          );
-
-          return {
-            name: item.name,
-            category: matchedStore?.name ?? "その他",
-          };
-        });
-
-      const storeNames = STORES.map((store) => store.name);
-
-      const response = await fetch("/api/receipt-match", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          mimeType: receiptFile.type || "image/jpeg",
-          imageBase64,
-          itemNames,
-          categorizedItems,
-          storeNames,
-        }),
+        return {
+          name: item.name.trim(),
+          category: matchedStore?.name ?? "その他",
+        };
       });
 
-      if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || "レシート照合に失敗しました");
-      }
+    const storeNames = STORES.map((store) => store.name);
 
-      const apiData: ApiReceiptResult = await response.json();
+    //デバッグ用
+    console.log("items", items);
+    console.log("itemNames", itemNames);
 
-setItems((prev) => applyReceiptResultToItems(prev, apiData));
+    const response = await fetch("/api/receipt-match", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        mimeType: receiptFile.type || "image/jpeg",
+        imageBase64,
+        itemNames,
+        categorizedItems,
+        storeNames,
+      }),
+    });
 
-await appendReceiptHistory({
-  shopFull: apiData.shopFull,
-  category: apiData.category,
-  matches: apiData.matches,
-  extras: apiData.extras,
-});
-
-const normalizeItems = buildNormalizeItemsFromApiReceiptResult(apiData);
-
-let normalizedItems: NormalizedPurchasedItem[] = normalizeItems.map((item) => ({
-  raw_name: item.raw_name,
-  normalized_name: item.raw_name,
-  shop: item.shop,
-  is_consumable: null,
-}));
-
-if (normalizeItems.length > 0) {
-  const apiNormalizedItems = await normalizePurchasedItems({
-    items: normalizeItems,
-    storeCandidates: STORES.map((store) => store.name),
-  });
-
-  console.log("normalizedItems", apiNormalizedItems);
-
-  normalizedItems = apiNormalizedItems.map((item) => ({
-    raw_name: item.raw_name,
-    normalized_name: item.normalized_name,
-    shop: item.shop,
-    is_consumable: item.is_consumable,
-  }));
-
-  const purchasePayload = normalizedItems.map((item) => ({
-    raw_name: item.raw_name,
-    normalized_name: item.normalized_name,
-    shop: item.shop,
-    is_consumable: item.is_consumable,
-  }));
-
-  await savePurchasedItems(purchasePayload);
-}
-
-const displayResult = buildDisplayReceiptResult(apiData, normalizedItems);
-setReceiptResult(displayResult);
-
-await loadReceiptHistories();
-
-setStatusMessage("レシート照合と購入履歴の保存が完了しました");
-
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "レシート照合に失敗しました";
-      setReceiptError(message);
-      setStatusMessage(message);
-    } finally {
-      setReceiptLoading(false);
+    if (!response.ok) {
+      const message = await response.text();
+      throw new Error(message || "レシート照合に失敗しました");
     }
 
-    
+    const apiData: ApiReceiptResult = await response.json();
+    console.log("apiData", apiData);
+    const normalizeItems = buildNormalizeItemsFromApiReceiptResult(apiData);
 
+    let normalizedItems: NormalizedPurchasedItem[] = normalizeItems.map((item) => ({
+      raw_name: item.raw_name,
+      normalized_name: item.raw_name,
+      shop: item.shop,
+      is_consumable: null,
+    }));
 
-  };
+    if (normalizeItems.length > 0) {
+      const apiNormalizedItems = await normalizePurchasedItems({
+        items: normalizeItems,
+        storeCandidates: STORES.map((store) => store.name),
+      });
+
+      normalizedItems = apiNormalizedItems.map((item) => ({
+        raw_name: item.raw_name,
+        normalized_name: item.normalized_name,
+        shop: item.shop,
+        is_consumable: item.is_consumable,
+      }));
+
+      console.log("normalizedItems", apiNormalizedItems);
+
+      const purchasePayload = normalizedItems.map((item) => ({
+        raw_name: item.raw_name,
+        normalized_name: item.normalized_name,
+        shop: item.shop,
+        is_consumable: item.is_consumable,
+      }));
+
+      await savePurchasedItems(purchasePayload);
+    }
+
+    // const reconciledApiData = reconcileReceiptResultWithNormalizedItems(
+    //   apiData,
+    //   normalizedItems,
+    //   items
+    // );
+    const reconciledApiData = reconcileReceiptResultWithNormalizedItems(
+      apiData,
+      normalizedItems,
+      itemNames
+    );
+    // setDebugReceiptData({
+    //   apiData,
+    //   normalizedItems,
+    //   reconciledApiData,
+    // });
+
+    console.log("reconciledApiData", reconciledApiData);
+
+    setItems((prev) => applyReceiptResultToItems(prev, reconciledApiData));
+
+    await appendReceiptHistory({
+      shopFull: reconciledApiData.shopFull,
+      category: reconciledApiData.category,
+      matches: reconciledApiData.matches,
+      extras: reconciledApiData.extras,
+    });
+
+    const displayResult = buildDisplayReceiptResult(
+      reconciledApiData,
+      normalizedItems
+    );
+    setReceiptResult(displayResult);
+
+    await loadReceiptHistories();
+
+    setStatusMessage("レシート照合と購入履歴の保存が完了しました");
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "レシート照合に失敗しました";
+    setReceiptError(message);
+    setStatusMessage(message);
+  } finally {
+    setReceiptLoading(false);
+  }
+};
 
   const handleDeleteItem = (itemId: string) => {
     setItems((prev) => prev.filter((item) => item.id !== itemId));
@@ -1050,6 +1188,7 @@ setStatusMessage("レシート照合と購入履歴の保存が完了しまし�
           </div>
         )} */}
         {mode === "receipt" && (
+          
           <div className="space-y-4">
           <ReceiptPanel
             previewUrl={receiptPreviewUrl}
@@ -1060,7 +1199,32 @@ setStatusMessage("レシート照合と購入履歴の保存が完了しまし�
             onSelectFile={handleSelectReceiptFile}
             onAnalyze={handleAnalyzeReceipt}
           />
+          {/* {debugReceiptData && (
+  <div className="rounded-2xl border bg-white p-4">
+    <h2 className="mb-3 font-semibold">デバッグ情報</h2>
 
+    <div className="mb-4">
+      <div className="mb-1 font-medium">apiData</div>
+      <pre className="overflow-x-auto rounded-lg bg-neutral-100 p-3 text-xs">
+        {JSON.stringify(debugReceiptData.apiData, null, 2)}
+      </pre>
+    </div>
+
+    <div className="mb-4">
+      <div className="mb-1 font-medium">normalizedItems</div>
+      <pre className="overflow-x-auto rounded-lg bg-neutral-100 p-3 text-xs">
+        {JSON.stringify(debugReceiptData.normalizedItems, null, 2)}
+      </pre>
+    </div>
+
+    <div>
+      <div className="mb-1 font-medium">reconciledApiData</div>
+      <pre className="overflow-x-auto rounded-lg bg-neutral-100 p-3 text-xs">
+        {JSON.stringify(debugReceiptData.reconciledApiData, null, 2)}
+      </pre>
+    </div>
+  </div>
+)} */}
            <ReceiptHistoryPanel
             histories={receiptHistories}
             isLoading={receiptHistoryLoading}
