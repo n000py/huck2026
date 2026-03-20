@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { DndContext, DragEndEvent } from "@dnd-kit/core";
 import Header from "@/components/Header";
 import ModeTabs from "@/components/ModeTabs";
@@ -21,7 +21,13 @@ import {
 import { findStoreIdByName } from "@/lib/shopMapping";
 import { suggestStoresByGemini } from "@/lib/gemini";
 import { applyReceiptResultToItems } from "@/lib/receipt";
-import type { Item, Mode, ReceiptResult } from "@/types";
+import type {
+  Item,
+  Mode,
+  ReceiptAnalyzeResult,
+  ReceiptPreview,
+  ReceiptResult,
+} from "@/types";
 import ReceiptInsightsPanel from "@/components/ReceiptInsightsPanel";
 import { buildReceiptInsights } from "@/lib/receiptInsights";
 import { savePurchasedItems } from "@/lib/purchaseClient";
@@ -209,6 +215,10 @@ function normalizeKey(value: string) {
   return value.trim().toLowerCase();
 }
 
+function buildReceiptFileKey(file: File) {
+  return `${file.name}-${file.size}-${file.lastModified}`;
+}
+
 function reconcileReceiptResultWithNormalizedItems(
   apiResult: ApiReceiptResult,
   normalizedItems: NormalizedPurchasedItem[],
@@ -275,19 +285,15 @@ export default function Home() {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState("待機中");
 
-  const [receiptFile, setReceiptFile] = useState<File | null>(null);
-  const [receiptPreviewUrl, setReceiptPreviewUrl] = useState<string | null>(null);
-  const [receiptResult, setReceiptResult] = useState<ReceiptResult | null>(null);
+  const [receiptFiles, setReceiptFiles] = useState<File[]>([]);
+  const [receiptPreviewUrls, setReceiptPreviewUrls] = useState<ReceiptPreview[]>([]);
+  const [receiptResults, setReceiptResults] = useState<ReceiptAnalyzeResult[]>([]);
+  const receiptPreviewUrlsRef = useRef<ReceiptPreview[]>([]);
   const [receiptLoading, setReceiptLoading] = useState(false);
   const [receiptError, setReceiptError] = useState<string | null>(null);
+  const [receiptUnmatchedItems, setReceiptUnmatchedItems] = useState<string[]>([]);
   const [isMounted, setIsMounted] = useState(false);
   const [isInsightsOpen, setIsInsightsOpen] = useState(false);
-//   const [debugReceiptData, setDebugReceiptData] = useState<{
-//   apiData: ApiReceiptResult | null;
-//   normalizedItems: NormalizedPurchasedItem[];
-//   reconciledApiData: ApiReceiptResult | null;
-// } | null>(null);
-
   const selectedStore = useMemo(
     () => STORES.find((store) => store.id === selectedStoreId),
     [selectedStoreId]
@@ -305,12 +311,14 @@ export default function Home() {
     return buildReceiptInsights(receiptHistories, items);
   }, [receiptHistories, items]);
   
-  const unmatchedItems = useMemo(() => {
-    return items
-    .filter((item) => item.purchaseStatus !== "bought")
-    .map((item) => item.name.trim())
-    .filter((name) => name !== "");
-  }, [items]);
+  // const unmatchedItems = useMemo(() => {
+  //   return items
+  //   .filter((item) => item.purchaseStatus !== "bought")
+  //   .map((item) => item.name.trim())
+  //   .filter((name) => name !== "");
+  // }, [items]);
+
+  
 
   const existingItemNames = useMemo(() => {
     return items.map((item) => item.name);
@@ -336,6 +344,7 @@ export default function Home() {
       currentStoreId: null,
       suggestionStatus: "manual",
       purchaseStatus: "pending",
+      shoppingChecked: false,
       reason: "レシート履歴のリスト外購入から追加",
     };
 
@@ -365,7 +374,12 @@ export default function Home() {
         const data = await fetchShoppingState();
 
         if (data.items && data.items.length > 0) {
-          setItems(data.items);
+          setItems(
+            data.items.map((item) => ({
+              ...item,
+              shoppingChecked: item.shoppingChecked ?? false,
+            }))
+          );
         } else {
           setItems([]);
         }
@@ -409,15 +423,18 @@ export default function Home() {
 
     return () => clearTimeout(timer);
   }, [items, selectedStoreId, isHydrated]);
+  
+useEffect(() => {
+  receiptPreviewUrlsRef.current = receiptPreviewUrls;
+}, [receiptPreviewUrls]);
 
-
-  useEffect(() => {
-    return () => {
-      if (receiptPreviewUrl) {
-        URL.revokeObjectURL(receiptPreviewUrl);
-      }
-    };
-  }, [receiptPreviewUrl]);
+useEffect(() => {
+  return () => {
+    receiptPreviewUrlsRef.current.forEach((preview) => {
+      URL.revokeObjectURL(preview.previewUrl);
+    });
+  };
+}, []);
 
   useEffect(() => {
     const savedMode = sessionStorage.getItem("smart-shopping-mode");
@@ -468,6 +485,7 @@ export default function Home() {
       currentStoreId: null,
       suggestionStatus: "accepted",
       purchaseStatus: "pending",
+      shoppingChecked: false,
       reason: "",
     };
 
@@ -496,6 +514,7 @@ export default function Home() {
      currentStoreId: null,
      suggestionStatus: "manual",
      purchaseStatus: "pending",
+     shoppingChecked: false,
      reason: "補充おすすめから追加",
    };
 
@@ -504,6 +523,7 @@ export default function Home() {
   };
 
   const handleResetList = () => {
+    setReceiptUnmatchedItems([]);
     const ok = window.confirm("現在の買い物リストをリセットしますか？");
     if (!ok) return;
 
@@ -511,14 +531,14 @@ export default function Home() {
     setItems([]);
     setSelectedStoreId(STORES[0].id);
     setInputValue("");
-    setReceiptFile(null);
 
-    if (receiptPreviewUrl) {
-      URL.revokeObjectURL(receiptPreviewUrl);
-    }
-
-    setReceiptPreviewUrl(null);
-    setReceiptResult(null);
+    setReceiptFiles([]);
+    
+    receiptPreviewUrls.forEach((preview) => {
+      URL.revokeObjectURL(preview.previewUrl);
+    });
+    setReceiptPreviewUrls([]);
+    setReceiptResults([]);
     setReceiptError(null);
     setStatusMessage("買い物リストをリセットしました");
   };
@@ -592,19 +612,18 @@ export default function Home() {
     }
   };
 
-  const handleToggleBought = (itemId: string) => {
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === itemId
-          ? {
-              ...item,
-              purchaseStatus:
-                item.purchaseStatus === "bought" ? "pending" : "bought",
-            }
-          : item
-      )
-    );
-  };
+const handleToggleBought = (itemId: string) => {
+  setItems((prev) =>
+    prev.map((item) =>
+      item.id === itemId
+        ? {
+            ...item,
+            shoppingChecked: !item.shoppingChecked,
+          }
+        : item
+    )
+  );
+};
 
   const handleDragEnd = (event: DragEndEvent) => {
     const activeId = String(event.active.id);
@@ -619,41 +638,80 @@ export default function Home() {
     handleMoveItem(activeId, targetStore.id);
     setSelectedStoreId(targetStore.id);
   };
-
-  const handleSelectReceiptFile = async (file: File | null) => {
-  if (receiptPreviewUrl) {
-    URL.revokeObjectURL(receiptPreviewUrl);
-  }
-
-  setReceiptResult(null);
+  
+const handleSelectReceiptFiles = async (files: File[]) => {
+  setReceiptUnmatchedItems([]);
+  setReceiptResults([]);
   setReceiptError(null);
 
-  if (!file) {
-    setReceiptFile(null);
-    setReceiptPreviewUrl(null);
+  if (files.length === 0) {
     return;
   }
 
   try {
-    let workingFile = file;
+    const convertedFiles: File[] = [];
 
-    if (isHeicFile(file)) {
-      setStatusMessage("HEIC画像をJPEGに変換中...");
-      workingFile = await convertHeicToJpeg(file);
+    for (const file of files) {
+      let workingFile = file;
+
+      if (isHeicFile(file)) {
+        setStatusMessage(`「${file.name}」をJPEGに変換中...`);
+        workingFile = await convertHeicToJpeg(file);
+      }
+
+      convertedFiles.push(workingFile);
     }
 
-    setReceiptFile(workingFile);
+    const existingKeys = new Set(receiptFiles.map(buildReceiptFileKey));
+    const appendedFiles = convertedFiles.filter(
+      (file) => !existingKeys.has(buildReceiptFileKey(file))
+    );
 
-    const previewUrl = URL.createObjectURL(workingFile);
-    setReceiptPreviewUrl(previewUrl);
+    if (appendedFiles.length === 0) {
+      setStatusMessage("同じレシート画像はすでに選択されています");
+      return;
+    }
 
-    setStatusMessage(`レシート画像「${workingFile.name}」を選択しました`);
+    const nextFiles = [...receiptFiles, ...appendedFiles];
+    const nextPreviews: ReceiptPreview[] = [
+      ...receiptPreviewUrls,
+      ...appendedFiles.map((file) => ({
+        fileName: file.name,
+        previewUrl: URL.createObjectURL(file),
+      })),
+    ];
+
+    setReceiptFiles(nextFiles);
+    setReceiptPreviewUrls(nextPreviews);
+    setStatusMessage(
+      `${appendedFiles.length}枚追加しました（合計${nextFiles.length}枚）`
+    );
   } catch (error) {
     console.error(error);
-    setReceiptFile(null);
-    setReceiptPreviewUrl(null);
     setReceiptError("HEIC画像の変換に失敗しました");
     setStatusMessage("HEIC画像の変換に失敗しました");
+  }
+};
+
+const handleRemoveReceiptFile = (index: number) => {
+  const targetPreview = receiptPreviewUrls[index];
+  if (targetPreview) {
+    URL.revokeObjectURL(targetPreview.previewUrl);
+  }
+
+  const nextFiles = receiptFiles.filter((_, i) => i !== index);
+  const nextPreviews = receiptPreviewUrls.filter((_, i) => i !== index);
+  const nextResults = receiptResults.filter((_, i) => i !== index);
+
+  setReceiptFiles(nextFiles);
+  setReceiptPreviewUrls(nextPreviews);
+  setReceiptResults(nextResults);
+  setReceiptError(null);
+
+  if (nextFiles.length === 0) {
+    setStatusMessage("選択中のレシート画像をすべて削除しました");
+  } else {
+    setStatusMessage(`レシート画像を削除しました（残り${nextFiles.length}枚）`);
   }
 };
 
@@ -698,7 +756,7 @@ export default function Home() {
   };
 
 const handleAnalyzeReceipt = async () => {
-  if (!receiptFile) {
+  if (receiptFiles.length === 0) {
     setReceiptError("先にレシート画像を選択してください");
     setStatusMessage("レシート画像を選択してください");
     return;
@@ -707,125 +765,151 @@ const handleAnalyzeReceipt = async () => {
   try {
     setReceiptLoading(true);
     setReceiptError(null);
-    setReceiptResult(null);
+    setReceiptResults([]);
     setStatusMessage("レシートを照合中...");
-
-    const imageBase64 = await fileToBase64(receiptFile);
     
-    const targetItems = items.filter((item) => item.name.trim() !== "");
-    
-    const itemNames = targetItems.map((item) => item.name.trim());
+    const initialPendingItemNames = items
+    .filter((item) => item.name.trim() !== "")
+    .filter((item) => item.purchaseStatus !== "bought")
+    .map((item) => item.name.trim());
 
-    const categorizedItems = targetItems
-      .filter((item) => item.currentStoreId)
-      .map((item) => {
-        const matchedStore = STORES.find(
-          (store) => store.id === item.currentStoreId
-        );
+    const matchedListNameSet = new Set<string>();
 
-        return {
-          name: item.name.trim(),
-          category: matchedStore?.name ?? "その他",
-        };
+    let workingItems = items;
+    const nextReceiptResults: ReceiptAnalyzeResult[] = [];
+
+    for (const receiptFile of receiptFiles) {
+      setStatusMessage(`「${receiptFile.name}」を照合中...`);
+
+      const imageBase64 = await fileToBase64(receiptFile);
+
+      const targetItems = workingItems.filter(
+        (item) => item.name.trim() !== "" && item.purchaseStatus !== "bought"
+      );
+
+      const itemNames = targetItems.map((item) => item.name.trim());
+
+      const categorizedItems = targetItems
+        .filter((item) => item.currentStoreId)
+        .map((item) => {
+          const matchedStore = STORES.find(
+            (store) => store.id === item.currentStoreId
+          );
+
+          return {
+            name: item.name.trim(),
+            category: matchedStore?.name ?? "その他",
+          };
+        });
+
+      const storeNames = STORES.map((store) => store.name);
+
+      console.log("workingItems", workingItems);
+      console.log("itemNames", itemNames);
+
+      const response = await fetch("/api/receipt-match", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          mimeType: receiptFile.type || "image/jpeg",
+          imageBase64,
+          itemNames,
+          categorizedItems,
+          storeNames,
+        }),
       });
 
-    const storeNames = STORES.map((store) => store.name);
+      if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || "レシート照合に失敗しました");
+      }
 
-    //デバッグ用
-    console.log("items", items);
-    console.log("itemNames", itemNames);
+      const apiData: ApiReceiptResult = await response.json();
+      console.log("apiData", apiData);
 
-    const response = await fetch("/api/receipt-match", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        mimeType: receiptFile.type || "image/jpeg",
-        imageBase64,
-        itemNames,
-        categorizedItems,
-        storeNames,
-      }),
-    });
+      const normalizeItems = buildNormalizeItemsFromApiReceiptResult(apiData);
 
-    if (!response.ok) {
-      const message = await response.text();
-      throw new Error(message || "レシート照合に失敗しました");
-    }
+      let normalizedItems: NormalizedPurchasedItem[] = normalizeItems.map((item) => ({
+        raw_name: item.raw_name,
+        normalized_name: item.raw_name,
+        shop: item.shop,
+        is_consumable: null,
+      }));
 
-    const apiData: ApiReceiptResult = await response.json();
-    console.log("apiData", apiData);
-    const normalizeItems = buildNormalizeItemsFromApiReceiptResult(apiData);
+      if (normalizeItems.length > 0) {
+        const apiNormalizedItems = await normalizePurchasedItems({
+          items: normalizeItems,
+          storeCandidates: STORES.map((store) => store.name),
+        });
 
-    let normalizedItems: NormalizedPurchasedItem[] = normalizeItems.map((item) => ({
-      raw_name: item.raw_name,
-      normalized_name: item.raw_name,
-      shop: item.shop,
-      is_consumable: null,
-    }));
+        normalizedItems = apiNormalizedItems.map((item) => ({
+          raw_name: item.raw_name,
+          normalized_name: item.normalized_name,
+          shop: item.shop,
+          is_consumable: item.is_consumable,
+        }));
 
-    if (normalizeItems.length > 0) {
-      const apiNormalizedItems = await normalizePurchasedItems({
-        items: normalizeItems,
-        storeCandidates: STORES.map((store) => store.name),
+        console.log("normalizedItems", apiNormalizedItems);
+
+        const purchasePayload = normalizedItems.map((item) => ({
+          raw_name: item.raw_name,
+          normalized_name: item.normalized_name,
+          shop: item.shop,
+          is_consumable: item.is_consumable,
+        }));
+
+        await savePurchasedItems(purchasePayload);
+      }
+
+      const reconciledApiData = reconcileReceiptResultWithNormalizedItems(
+        apiData,
+        normalizedItems,
+        itemNames
+      );
+
+      console.log("reconciledApiData", reconciledApiData);
+
+      reconciledApiData.matches.forEach((match) => {
+        const listName = match.listName?.trim();
+        if (!listName) return;
+        matchedListNameSet.add(normalizeKey(listName));
       });
 
-      normalizedItems = apiNormalizedItems.map((item) => ({
-        raw_name: item.raw_name,
-        normalized_name: item.normalized_name,
-        shop: item.shop,
-        is_consumable: item.is_consumable,
-      }));
+      workingItems = applyReceiptResultToItems(workingItems, reconciledApiData);
 
-      console.log("normalizedItems", apiNormalizedItems);
+      await appendReceiptHistory({
+        shopFull: reconciledApiData.shopFull,
+        category: reconciledApiData.category,
+        matches: reconciledApiData.matches,
+        extras: reconciledApiData.extras,
+      });
 
-      const purchasePayload = normalizedItems.map((item) => ({
-        raw_name: item.raw_name,
-        normalized_name: item.normalized_name,
-        shop: item.shop,
-        is_consumable: item.is_consumable,
-      }));
+      const displayResult = buildDisplayReceiptResult(
+        reconciledApiData,
+        normalizedItems
+      );
 
-      await savePurchasedItems(purchasePayload);
+      nextReceiptResults.push({
+        fileName: receiptFile.name,
+        result: displayResult,
+      });
     }
 
-    // const reconciledApiData = reconcileReceiptResultWithNormalizedItems(
-    //   apiData,
-    //   normalizedItems,
-    //   items
-    // );
-    const reconciledApiData = reconcileReceiptResultWithNormalizedItems(
-      apiData,
-      normalizedItems,
-      itemNames
+    const nextReceiptUnmatchedItems = initialPendingItemNames.filter(
+      (name) => !matchedListNameSet.has(normalizeKey(name))
     );
-    // setDebugReceiptData({
-    //   apiData,
-    //   normalizedItems,
-    //   reconciledApiData,
-    // });
 
-    console.log("reconciledApiData", reconciledApiData);
-
-    setItems((prev) => applyReceiptResultToItems(prev, reconciledApiData));
-
-    await appendReceiptHistory({
-      shopFull: reconciledApiData.shopFull,
-      category: reconciledApiData.category,
-      matches: reconciledApiData.matches,
-      extras: reconciledApiData.extras,
-    });
-
-    const displayResult = buildDisplayReceiptResult(
-      reconciledApiData,
-      normalizedItems
-    );
-    setReceiptResult(displayResult);
+    setItems(workingItems);
+    setReceiptResults(nextReceiptResults);
+    setReceiptUnmatchedItems(nextReceiptUnmatchedItems);
 
     await loadReceiptHistories();
 
-    setStatusMessage("レシート照合と購入履歴の保存が完了しました");
+    setStatusMessage(
+      `${receiptFiles.length}枚のレシート照合と購入履歴の保存が完了しました`
+    );
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "レシート照合に失敗しました";
@@ -1190,15 +1274,16 @@ const handleAnalyzeReceipt = async () => {
         {mode === "receipt" && (
           
           <div className="space-y-4">
-          <ReceiptPanel
-            previewUrl={receiptPreviewUrl}
-            isLoading={receiptLoading}
-            result={receiptResult}
-            errorMessage={receiptError}
-            unmatchedItems={unmatchedItems}
-            onSelectFile={handleSelectReceiptFile}
-            onAnalyze={handleAnalyzeReceipt}
-          />
+            <ReceiptPanel
+  previewUrls={receiptPreviewUrls}
+  isLoading={receiptLoading}
+  results={receiptResults}
+  errorMessage={receiptError}
+  unmatchedItems={receiptUnmatchedItems}
+  onSelectFiles={handleSelectReceiptFiles}
+  onAnalyze={handleAnalyzeReceipt}
+  onRemoveFile={handleRemoveReceiptFile}
+/>
           {/* {debugReceiptData && (
   <div className="rounded-2xl border bg-white p-4">
     <h2 className="mb-3 font-semibold">デバッグ情報</h2>

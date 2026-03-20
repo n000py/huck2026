@@ -15,6 +15,7 @@ export type Item = {
   currentStoreId: string | null;
   suggestionStatus: SuggestionStatus;
   purchaseStatus: PurchaseStatus;
+  shoppingChecked: boolean;
   reason: string;
 };
 
@@ -49,4 +50,14 @@ export type ReceiptResult = {
   category: string;
   matches: ReceiptMatch[];
   extras: ReceiptExtra[];
+};
+
+export type ReceiptPreview = {
+  fileName: string;
+  previewUrl: string;
+};
+
+export type ReceiptAnalyzeResult = {
+  fileName: string;
+  result: ReceiptResult;
 };

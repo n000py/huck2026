@@ -1,33 +1,42 @@
 {
   "items": [
     {
-      "id": "item-1773901341849-9g3ndmp",
-      "name": "乾電池",
-      "suggestedStoreId": "store-100yen",
-      "currentStoreId": "store-100yen",
-      "suggestionStatus": "accepted",
-      "purchaseStatus": "pending",
-      "reason": "100均でよく売られています。"
-    },
-    {
-      "id": "item-1773901359366-0wihx1c",
-      "name": "豆乳",
+      "id": "053c856c-eaa0-47e0-bd10-d82fe2aa31bc",
+      "name": "牛乳",
       "suggestedStoreId": "store-supermarket",
       "currentStoreId": "store-supermarket",
       "suggestionStatus": "accepted",
-      "purchaseStatus": "bought",
-      "reason": "スーパーで日用品として売られています。"
+      "purchaseStatus": "pending",
+      "reason": "食料品なのでスーパーで購入します。"
     },
     {
-      "id": "item-1773901373983-l5twgkk",
-      "name": "ゴミ袋ハンガー",
-      "suggestedStoreId": "store-100yen",
+      "id": "26f4195d-b1db-40b7-b140-4ff807d77c0b",
+      "name": "乾電池",
+      "suggestedStoreId": "store-drugstore",
       "currentStoreId": "store-100yen",
+      "suggestionStatus": "modified",
+      "purchaseStatus": "pending",
+      "reason": "日用品なのでドラッグストアで購入します。"
+    },
+    {
+      "id": "902f90aa-9a6f-487c-b8a0-cc1a0b6c4631",
+      "name": "卵",
+      "suggestedStoreId": "store-supermarket",
+      "currentStoreId": "store-supermarket",
       "suggestionStatus": "accepted",
       "purchaseStatus": "pending",
-      "reason": "100均で便利グッズとして売られています。"
+      "reason": "食料品なのでスーパーで購入します。"
+    },
+    {
+      "id": "2bc0e5cb-ea2e-46b0-9270-b28673fc34bb",
+      "name": "ぶなしめじ",
+      "suggestedStoreId": "store-supermarket",
+      "currentStoreId": "store-supermarket",
+      "suggestionStatus": "accepted",
+      "purchaseStatus": "pending",
+      "reason": "食材なのでスーパーで購入します。"
     }
   ],
-  "selectedStoreId": "store-100yen",
-  "updatedAt": "2026-03-19T06:23:28.882Z"
+  "selectedStoreId": "store-supermarket",
+  "updatedAt": "2026-03-20T07:18:10.188Z"
 }

@@ -14,11 +14,13 @@ export default function ShoppingPanel({
   onToggleBought,
 }: ShoppingPanelProps) {
   const visibleItems = items.filter(
-    (item) => item.currentStoreId === selectedStoreId
+    (item) =>
+      item.currentStoreId === selectedStoreId &&
+      item.purchaseStatus !== "bought"
   );
 
-  const boughtCount = visibleItems.filter(
-    (item) => item.purchaseStatus === "bought"
+  const checkedCount = visibleItems.filter(
+    (item) => item.shoppingChecked
   ).length;
 
   return (
@@ -28,7 +30,7 @@ export default function ShoppingPanel({
           {selectedStore?.name ?? "未選択"}で買うもの
         </h2>
         <div className="text-sm text-neutral-500">
-          {boughtCount} / {visibleItems.length} 購入済み
+          {checkedCount} / {visibleItems.length} チェック済み
         </div>
       </div>
 
@@ -42,7 +44,7 @@ export default function ShoppingPanel({
             >
               <span
                 className={
-                  item.purchaseStatus === "bought"
+                  item.shoppingChecked
                     ? "text-neutral-400 line-through"
                     : ""
                 }
@@ -50,7 +52,7 @@ export default function ShoppingPanel({
                 {item.name}
               </span>
               <span className="text-sm text-neutral-400">
-                {item.purchaseStatus === "bought" ? "購入済み" : "未購入"}
+                {item.shoppingChecked ? "チェック済み" : "未チェック"}
               </span>
             </button>
           ))
